@@ -1,11 +1,10 @@
-import torch
 import torch.nn as nn
 
 from attention import MultiHeadAttention
 from layers import PFFlayer
 
 
-class Encoder(nn.Module):
+class Decoder(nn.Module):
     def __init__(
         self,
         vocab_size: int,
@@ -26,14 +25,14 @@ class Encoder(nn.Module):
         :param dropout: dropout rate
         :param device: computation device
         """
-        super(Encoder, self).__init__()
+        super(Decoder, self).__init__()
 
         self.device = device
         self.token_emb = nn.Embedding(vocab_size, hidden_dim)
         self.pos_emb = nn.Embedding(max_length, hidden_dim)
 
         self.layers = nn.ModuleList([
-            EncoderLayer(
+            DecoderLayer(
                 hidden_dim,
                 n_heads,
                 feedforward_dim,
@@ -43,14 +42,11 @@ class Encoder(nn.Module):
             for _ in range(n_layers)
         ])
 
-        self.dropout = nn.Dropout(dropout)
-        self.scale = torch.sqrt(torch.FloatTensor([hidden_dim])).to(device)
-
-    def forward(self, x, mask):
+    def forward(self, tgt, src, tgt_mask, src_mask):
         pass
 
 
-class EncoderLayer(nn.Module):
+class DecoderLayer(nn.Module):
     def __init__(
         self,
         hidden_dim: int,
@@ -59,11 +55,19 @@ class EncoderLayer(nn.Module):
         dropout: float,
         device: str
     ) -> None:
-        super(EncoderLayer).__init__()
+        super(DecoderLayer).__init__()
         self.self_attn_layer_norm = nn.LayerNorm(hidden_dim)
+        self.enc_attn_layer_norm = nn.LayerNorm(hidden_dim)
         self.ff_layer_norm = nn.LayerNorm(hidden_dim)
 
         self.self_attention = MultiHeadAttention(
+            hidden_dim,
+            n_heads,
+            dropout,  # in official it's 0
+            device
+        )
+
+        self.cross_attention = MultiHeadAttention(
             hidden_dim,
             n_heads,
             dropout,  # in official it's 0
@@ -78,14 +82,20 @@ class EncoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, mask):
+    def forward(self, tgt, src, tgt_mask, src_mask):
         '''
-        :param x: [batch_size, src_len, hid_dim]
-        :param mask: [batch_size, 1, 1, src_len]
+        :param tgt: [batch_size, tgt_len, hid_dim]
+        :param src: [batch_size, src_len, hid_dim]
+        :param tgt_mask: [batch_size, 1, tgt_len, tgt_len]
+        :param tgt_mask: [batch_size, 1, 1, src_len]
         :return : [batch_size, src_len, hid_dim]
         '''
-        out, _ = self.self_attention(x, x, x, mask)
-        out = self.self_attn_layer_norm(x + self.dropout(out))
-        out = self.positionwise_feedforward(out)
-        out = self.ff_layer_norm(x + self.dropout(out))
-        return out
+        tgt_out, _ = self.self_attention(tgt, tgt, tgt, tgt_mask)
+        tgt = self.self_attn_layer_norm(tgt + self.dropout(tgt_out))
+
+        tgt_out, attention = self.cross_attention(tgt, src, src, src_mask)
+        tgt = self.self_attn_layer_norm(tgt + self.dropout(tgt_out))
+
+        tgt_out = self.positionwise_feedforward(tgt)
+        tgt_out = self.ff_layer_norm(tgt + self.dropout(tgt_out))
+        return tgt_out, attention

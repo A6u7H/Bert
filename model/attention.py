@@ -6,7 +6,6 @@ from typing import Optional
 
 
 class MultiHeadAttention(nn.Module):
-
     def __init__(
         self,
         hidden_dim: int,

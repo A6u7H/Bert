@@ -47,14 +47,17 @@ class Vocabulary:
             self.longest_sentence = sentence_len
         self.num_sentences += 1
 
-    def tokens_to_idx(self, tokens: List[str]):
-        token_idxs = [self.BOS_token]
+    def tokens_to_idx(self, tokens: List[str], add_bos_eos: bool = True):
+        token_idxs = []
+        if add_bos_eos:
+            token_idxs.append(self.BOS_token)
         for token in tokens:
             if token in self.word2index:
                 token_idxs.append(self.to_index(token))
             else:
                 token_idxs.append(self.UNK_token)
-        token_idxs.append(self.EOS_token)
+        if add_bos_eos:
+            token_idxs.append(self.EOS_token)
         return token_idxs
 
     def to_word(self, index):
@@ -88,7 +91,7 @@ class SeqCollate:
             tgt_tokens = self.src_tokenizer(item[1])
             src_tokens_idx.append(
                 torch.tensor(
-                    self.src_vocab.tokens_to_idx(src_tokens),
+                    self.src_vocab.tokens_to_idx(src_tokens, False),
                     dtype=torch.int64
                 )
             )
