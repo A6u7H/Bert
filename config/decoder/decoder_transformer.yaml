@@ -1,0 +1,9 @@
+_target_: model.decoder.Decoder
+vocab_size: ???
+hidden_dim: 256
+n_layers: 3
+n_heads: 8
+feedforward_dim: 512
+dropout: 0
+device: cuda
+max_length: 100

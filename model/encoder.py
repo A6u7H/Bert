@@ -1,8 +1,9 @@
-import torch
 import torch.nn as nn
 
-from attention import MultiHeadAttention
-from layers import PFFlayer
+from torch import Tensor
+
+from model.layers import MultiHeadAttentionLayer, PFFlayer
+from model.embedding import TransformerEmbedding
 
 
 class Encoder(nn.Module):
@@ -29,9 +30,13 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         self.device = device
-        self.token_emb = nn.Embedding(vocab_size, hidden_dim)
-        self.pos_emb = nn.Embedding(max_length, hidden_dim)
-
+        self.embedding = TransformerEmbedding(
+            vocab_size,
+            hidden_dim,
+            max_length,
+            dropout,
+            device
+        )
         self.layers = nn.ModuleList([
             EncoderLayer(
                 hidden_dim,
@@ -43,11 +48,17 @@ class Encoder(nn.Module):
             for _ in range(n_layers)
         ])
 
-        self.dropout = nn.Dropout(dropout)
-        self.scale = torch.sqrt(torch.FloatTensor([hidden_dim])).to(device)
+    def forward(self, src: Tensor, src_mask: Tensor):
+        '''
+        :param src: [batch_size, src_len]
+        :param src_mask: [batch_size, 1, 1, src_len]
+        :return : [batch_size, src_len, hid_dim]
+        '''
+        src_token_emb = self.embedding(src)
 
-    def forward(self, x, mask):
-        pass
+        for layer in self.layers:
+            src_emb_pos = layer(src_token_emb, src_mask)
+        return src_emb_pos
 
 
 class EncoderLayer(nn.Module):
@@ -59,14 +70,14 @@ class EncoderLayer(nn.Module):
         dropout: float,
         device: str
     ) -> None:
-        super(EncoderLayer).__init__()
+        super(EncoderLayer, self).__init__()
         self.self_attn_layer_norm = nn.LayerNorm(hidden_dim)
         self.ff_layer_norm = nn.LayerNorm(hidden_dim)
 
-        self.self_attention = MultiHeadAttention(
+        self.self_attention = MultiHeadAttentionLayer(
             hidden_dim,
             n_heads,
-            dropout,  # in official it's 0
+            dropout,  # in official implementation it's 0
             device
         )
 
@@ -78,14 +89,14 @@ class EncoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, mask):
+    def forward(self, src: Tensor, src_mask: Tensor):
         '''
         :param x: [batch_size, src_len, hid_dim]
         :param mask: [batch_size, 1, 1, src_len]
         :return : [batch_size, src_len, hid_dim]
         '''
-        out, _ = self.self_attention(x, x, x, mask)
-        out = self.self_attn_layer_norm(x + self.dropout(out))
+        out, _ = self.self_attention(src, src, src, src_mask)
+        out = self.self_attn_layer_norm(src + self.dropout(out))
         out = self.positionwise_feedforward(out)
-        out = self.ff_layer_norm(x + self.dropout(out))
+        out = self.ff_layer_norm(src + self.dropout(out))
         return out

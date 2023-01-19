@@ -5,7 +5,7 @@ from torch import Tensor
 from typing import Optional
 
 
-class MultiHeadAttention(nn.Module):
+class MultiHeadAttentionLayer(nn.Module):
     def __init__(
         self,
         hidden_dim: int,
@@ -13,7 +13,7 @@ class MultiHeadAttention(nn.Module):
         dropout: float,
         device: str
     ) -> None:
-        super(MultiHeadAttention, self).__init__()
+        super(MultiHeadAttentionLayer, self).__init__()
 
         assert hidden_dim % n_heads == 0
 
@@ -28,7 +28,7 @@ class MultiHeadAttention(nn.Module):
         self.fc_o = nn.Linear(hidden_dim, hidden_dim)
         self.dropout = nn.Dropout(dropout)
 
-        self.scale = torch.sqrt(torch.FloatTensor([self.head_dim])).to(device)
+        self.scale = torch.sqrt(torch.tensor([self.head_dim], device=device))
 
     def forward(
         self,
@@ -62,7 +62,7 @@ class MultiHeadAttention(nn.Module):
 
         attention = torch.softmax(energy, dim=-1)
         out = self.dropout(attention) @ value
-        out = out.view(batch_size, -1, self.hid_dim)
+        out = out.view(batch_size, -1, self.hidden_dim)
         out = self.fc_o(out)
 
         return out, attention

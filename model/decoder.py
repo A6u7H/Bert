@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from attention import MultiHeadAttention
-from layers import PFFlayer
+from model.layers import MultiHeadAttentionLayer, PFFlayer
+from model.embedding import TransformerEmbedding
 
 
 class Decoder(nn.Module):
@@ -28,8 +28,13 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
 
         self.device = device
-        self.token_emb = nn.Embedding(vocab_size, hidden_dim)
-        self.pos_emb = nn.Embedding(max_length, hidden_dim)
+        self.embedding = TransformerEmbedding(
+            vocab_size,
+            hidden_dim,
+            max_length,
+            dropout,
+            device
+        )
 
         self.layers = nn.ModuleList([
             DecoderLayer(
@@ -42,8 +47,20 @@ class Decoder(nn.Module):
             for _ in range(n_layers)
         ])
 
-    def forward(self, tgt, src, tgt_mask, src_mask):
-        pass
+        self.outpur_layer = nn.Linear(hidden_dim, vocab_size)
+
+    def forward(self, tgt, src_enc, tgt_mask, src_mask):
+        tgt_token_emb = self.embedding(tgt)
+
+        for layer in self.layers:
+            tgt_token_emb, attention = layer(
+                tgt_token_emb,
+                src_enc,
+                tgt_mask,
+                src_mask
+            )
+        output = self.outpur_layer(tgt_token_emb)
+        return output, attention
 
 
 class DecoderLayer(nn.Module):
@@ -55,19 +72,19 @@ class DecoderLayer(nn.Module):
         dropout: float,
         device: str
     ) -> None:
-        super(DecoderLayer).__init__()
+        super(DecoderLayer, self).__init__()
         self.self_attn_layer_norm = nn.LayerNorm(hidden_dim)
         self.enc_attn_layer_norm = nn.LayerNorm(hidden_dim)
         self.ff_layer_norm = nn.LayerNorm(hidden_dim)
 
-        self.self_attention = MultiHeadAttention(
+        self.self_attention = MultiHeadAttentionLayer(
             hidden_dim,
             n_heads,
             dropout,  # in official it's 0
             device
         )
 
-        self.cross_attention = MultiHeadAttention(
+        self.cross_attention = MultiHeadAttentionLayer(
             hidden_dim,
             n_heads,
             dropout,  # in official it's 0

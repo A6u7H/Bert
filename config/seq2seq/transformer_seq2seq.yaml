@@ -1,0 +1,3 @@
+_target_: model.seq2seq_transfromer.Seq2SeqTransformer
+encoder: ???
+decoder: ???
