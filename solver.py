@@ -1,4 +1,3 @@
-import torch
 import pytorch_lightning as pl
 
 from omegaconf import DictConfig
@@ -9,9 +8,7 @@ from hydra.utils import instantiate
 class Solver(pl.LightningModule):
     def __init__(
         self,
-        config: DictConfig,
-        source_vocab_size: int,
-        target_vocab_size: int,
+        config: DictConfig
     ) -> None:
         super().__init__()
         self.config = config
@@ -22,12 +19,17 @@ class Solver(pl.LightningModule):
         return self.model(x)
 
     def create_model(self):
-        encoder_model = instantiate(self.config.encoder)
-        decoder_model = instantiate(self.config.decoder)
-        model = isinstance(
+        encoder_model = instantiate(
+            self.config.encoder
+        )
+        decoder_model = instantiate(
+            self.config.decoder
+        )
+        model = instantiate(
             self.config.seq2seq,
             encoder=encoder_model,
             decoder=decoder_model,
+            device=self.config.trainer.accelerator
         )
         return model
 
@@ -53,10 +55,10 @@ class Solver(pl.LightningModule):
 
     def training_step(self, batch: Tensor, batch_idx: int):
         src_text, tgt_text = batch
-        pred_text_prob = self.model(src_text, tgt_text[:, :-1])
+        pred_text_prob, attention_mask = self.model(src_text, tgt_text[:, :-1])
         loss = self.loss_fn(
             pred_text_prob.view(-1, pred_text_prob.shape[-1]),
-            tgt_text[:, 1:].view(-1)
+            tgt_text[:, 1:].reshape(-1)
         )
 
         self.log("train/loss", loss)
@@ -66,10 +68,10 @@ class Solver(pl.LightningModule):
 
     def validation_step(self, batch: Tensor, batch_idx: int):
         src_text, tgt_text = batch
-        pred_text_prob = self.model(src_text, tgt_text[:, :-1])
+        pred_text_prob, attention_mask = self.model(src_text, tgt_text[:, :-1])
         loss = self.loss_fn(
             pred_text_prob.view(-1, pred_text_prob.shape[-1]),
-            tgt_text[:, 1:].view(-1)
+            tgt_text[:, 1:].reshape(-1)
         )
 
         self.log("val/loss", loss)
@@ -79,10 +81,10 @@ class Solver(pl.LightningModule):
 
     def test_step(self, batch: Tensor, batch_idx: int):
         src_text, tgt_text = batch
-        pred_text_prob = self.model(src_text, tgt_text[:, :-1])
+        pred_text_prob, attention_mask = self.model(src_text, tgt_text[:, :-1])
         loss = self.loss_fn(
             pred_text_prob.view(-1, pred_text_prob.shape[-1]),
-            tgt_text[:, 1:].view(-1)
+            tgt_text[:, 1:].reshape(-1)
         )
 
         self.log("test/loss", loss)

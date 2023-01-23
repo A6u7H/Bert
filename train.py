@@ -20,7 +20,9 @@ def main(config: DictConfig) -> None:
     model_logger = instantiate(config.logger)
 
     logger.info("Creating datamodule")
-    datamodule = TranslateDataModule(config)
+    datamodule = TranslateDataModule(config.dataset)
+    datamodule.prepare_data()
+    datamodule.setup("train")
 
     logger.info("Creating model...")
     model = Solver(config)

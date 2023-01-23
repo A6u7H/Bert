@@ -8,7 +8,7 @@ class Seq2SeqTransformer(nn.Module):
         encoder: nn.Module,
         decoder: nn.Module,
         pad_idx: int,
-        device
+        device: str
     ) -> None:
         super(Seq2SeqTransformer, self).__init__()
 

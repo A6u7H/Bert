@@ -1,4 +1,4 @@
 _target_: pytorch_lightning.loggers.WandbLogger
 save_dir: experiments/wandb
-project: autofocusing
+project: seq2seq
 log_model: False

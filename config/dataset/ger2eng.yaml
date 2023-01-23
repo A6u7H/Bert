@@ -1,0 +1,2 @@
+data_path: ../../multi30k-dataset/data/
+batch_size: 8

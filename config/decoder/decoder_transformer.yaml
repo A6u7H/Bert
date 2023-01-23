@@ -1,9 +1,9 @@
 _target_: model.decoder.Decoder
-vocab_size: ???
+vocab_size: 10195 # todo : fix it move into code
 hidden_dim: 256
 n_layers: 3
 n_heads: 8
 feedforward_dim: 512
 dropout: 0
-device: cuda
+device: cuda # todo : fix it move into code
 max_length: 100
