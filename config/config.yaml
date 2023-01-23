@@ -1,5 +1,11 @@
 defaults:
-- dataset: 
-- encoder:
-- decoder:
-- seq2seq:
+- dataset: ger2eng
+- encoder: encoder_transformer
+- decoder: decoder_transformer
+- seq2seq: seq2seq_transformer
+- optimizer: crossentropy
+- logger: wandb
+- trainer: default
+
+
+task_name: seq2seq_transformer

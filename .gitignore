@@ -6,3 +6,4 @@ experiments/
 **.pyc
 notebooks/.data/
 **.ipynb_checkpoints
+outputs/

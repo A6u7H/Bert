@@ -1,3 +1,4 @@
 _target_: model.seq2seq_transfromer.Seq2SeqTransformer
 encoder: ???
 decoder: ???
+pad_idx: 0
